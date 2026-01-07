@@ -1,0 +1,1408 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Multiple Rush - Playground</title>
+
+  <style>
+    /* ===== Font ===== */
+    @font-face{
+      font-family: "NanumHumanHeavy";
+      src: url("https://raw.githubusercontent.com/Yuhisa-Kr/WebCardGame/main/NanumHumanHeavy.ttf") format("truetype");
+      font-weight: 100 900;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    :root{
+      --bg:#1a1322;
+      --accent:#c3a9e0;
+      --gold:#f8cf57;
+      --glow: rgba(239,161,77,0.70); /* #efa14d @ 70% */
+
+      --card-w:141px;
+      --card-h:250px;
+      --gap:18px;
+      --bottom-safe: 92px;
+
+      /* 결과 소거 점 크기 */
+      --dotR: 20px;
+      --dotR-gap: 7px;
+
+      /* ✅ dot “중앙 기준” 간격 */
+      --dotW: 50px;  /* 리소스 실제 크기 */
+      --dotH: 50px;
+      --dotCenterX: 30px; /* 중앙-중앙 가로 간격 */
+      --dotCenterY: 50px; /* 중앙-중앙 세로 간격 */
+      --dotDoubleGap: 45px; /* 9 + 9 사이 간격 */
+    }
+
+    *{ box-sizing:border-box; }
+
+    body{
+      margin:0;
+      height:100vh;
+      background:
+        radial-gradient(1100px 700px at 50% 0%, rgba(195,169,224,0.12), transparent 55%),
+        radial-gradient(1200px 700px at 50% 100%, rgba(195,169,224,0.08), transparent 60%),
+        var(--bg);
+      color: rgba(255,255,255,0.92);
+      overflow:hidden;
+
+      /* ✅ 전 텍스트 폰트 */
+      font-family: "NanumHumanHeavy", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+
+    .wrap{
+      width: min(1600px, 100%);
+      margin: 0 auto;
+      padding: 22px 22px calc(var(--bottom-safe) + 12px);
+      height: 100vh;
+      display:flex;
+      flex-direction:column;
+      gap: 14px;
+      align-items:center;
+    }
+
+    /* ===== Start Cover ===== */
+    .startCover{
+      position:fixed;
+      inset:0;
+      z-index: 1000;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transition: opacity 220ms ease;
+    }
+    .startCover.hide{
+      opacity:0;
+      pointer-events:none;
+    }
+    .startPanel{
+      width: min(720px, 92vw);
+      padding: 24px 22px 20px;
+      border-radius: 22px;
+      background: rgba(26,19,34,0.78);
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: 0 18px 60px rgba(0,0,0,0.65);
+      text-align:center;
+    }
+    .startMsg{
+      margin: 6px 0 14px;
+      font-size: 34px;
+      font-weight: 1100;
+      letter-spacing: 0.4px;
+      text-shadow: 0 0 18px rgba(0,0,0,0.60);
+    }
+
+    button{
+      cursor:pointer;
+      border: 0;
+      border-radius: 16px;
+      padding: 12px 18px;
+      font-weight: 1100;
+      letter-spacing: 0.3px;
+      background: var(--accent);
+      color: #110b18;
+      box-shadow: 0 10px 26px rgba(0,0,0,0.35);
+      transition: transform .08s ease, filter .08s ease, opacity .12s ease;
+      min-width: 160px;
+      user-select:none;
+      font-family: inherit;
+    }
+    button:hover{ transform: translateY(-1px); filter: brightness(1.03); }
+    button:active{ transform: translateY(0px); filter: brightness(0.98); }
+    button:disabled{
+      opacity: 0.35;
+      cursor:not-allowed;
+      transform:none;
+      filter:none;
+    }
+    .ghost{
+      background: rgba(255,255,255,0.10);
+      color: rgba(255,255,255,0.92);
+      border: 1px solid rgba(255,255,255,0.14);
+      box-shadow:none;
+      min-width: 160px;
+    }
+
+    /* ===== HUD ===== */
+    .hud{
+      width: 100%;
+      display:flex;
+      justify-content:center;
+      user-select:none;
+      z-index: 2;
+      padding-top: 6px;
+    }
+    .hudInner{
+      display:flex;
+      gap: 46px;
+      align-items:center;
+      justify-content:center;
+      padding: 6px 14px;
+      border-radius: 18px;
+      background: rgba(0,0,0,0.10);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .hudBlock{ text-align:center; min-width: 90px; }
+
+    .hudLabel{
+      color: var(--bg);
+      text-shadow: 0 0 15px var(--glow), 0 0 15px var(--glow);
+      font-weight: 1100;
+      font-size: 16px;
+      letter-spacing: 0.5px;
+    }
+    .hudValue{
+      margin-top: 6px;
+      font-weight: 1200;
+      font-size: 22px;
+      color: rgba(255,255,255,0.92);
+      text-shadow: 0 0 16px rgba(0,0,0,0.65);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ===== Target + Erasure ===== */
+    .targetArea{
+      width: 100%;
+      max-width: 1500px;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      gap: 22px;
+      user-select:none;
+      margin-top: 6px;
+      z-index: 3;
+      min-height: 190px;
+    }
+
+    /* ✅ dot 패널: “중앙 기준 간격” 적용 */
+    .dotPanel{
+      display:flex;
+      flex-direction:column;
+      gap: var(--dotCenterY);      /* ✅ 세로 중앙 간격 */
+      align-items:center;
+      justify-content:flex-start;
+      width: fit-content;
+    }
+    .erRow{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap: var(--dotDoubleGap);    /* ✅ 9 + 9 간격 */
+    }
+    .dotGroup{
+      display:flex;
+      align-items:center;
+      gap: var(--dotCenterX);      /* ✅ 가로 중앙 간격 */
+    }
+
+    .dot{
+      width: var(--dotW);
+      height: var(--dotH);
+      object-fit: contain;
+      display:block;
+      margin:0;
+      padding:0;
+      line-height:0;
+      flex: 0 0 auto;
+      transform: translateZ(0);
+    }
+    .dot.lit{
+      filter:
+        drop-shadow(0 0 10px rgba(248,207,87,0.55))
+        drop-shadow(0 0 18px rgba(248,207,87,0.22));
+    }
+    .dot.pulse{ animation: dotPulse 320ms ease-out; }
+    @keyframes dotPulse{
+      0%   { transform: scale(0.92); opacity: 0.85; }
+      45%  { transform: scale(1.14); opacity: 1; }
+      100% { transform: scale(1.00); }
+    }
+
+    .targetStack{
+      text-align:center;
+      min-width: 340px;
+      padding: 0 8px;
+    }
+    .targetLabel{
+      font-size: 44px;
+      font-weight: 1100;
+      letter-spacing: 1px;
+      margin: 0 0 8px;
+      color: var(--bg);
+      text-shadow: 0 0 15px var(--glow), 0 0 15px var(--glow);
+    }
+    .targetValue{
+      font-size: 110px;
+      font-weight: 1200;
+      margin: 0;
+      line-height: 1.0;
+      font-variant-numeric: tabular-nums;
+      color: var(--gold);
+      text-shadow: 0 10px 18px rgba(0,0,0,0.55);
+      opacity: 0;
+      transition: opacity 300ms ease;
+    }
+    .targetValue.show{ opacity: 1; }
+
+    /* ===== Cards ===== */
+    .cardZone{
+      width: 100%;
+      display:flex;
+      justify-content:center;
+      flex: 1 1 auto;
+      min-height: 0;
+      padding-bottom: 10px;
+      z-index: 1;
+    }
+
+    .cardScroller{
+      width: 100%;
+      max-width: calc(var(--card-w) * 9 + var(--gap) * 8 + 48px);
+      padding: 10px 12px 12px;
+      border-radius: 18px;
+      height: calc(var(--card-h) * 3 + var(--gap) * 2 + 22px);
+      max-height: calc(100vh - 280px - var(--bottom-safe));
+      overflow-y: auto;
+      overflow-x: hidden;
+      display:flex;
+      justify-content:center;
+      scrollbar-gutter: stable;
+      position: relative;
+      z-index: 1;
+    }
+
+    .cardsWrap{
+      width: calc(var(--card-w) * 9 + var(--gap) * 8);
+      display:flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-content: flex-start;
+      gap: var(--gap);
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .flipCard{
+      width: var(--card-w);
+      height: var(--card-h);
+      perspective: 1000px;
+      user-select:none;
+      position: relative;
+      flex: 0 0 auto;
+      transition: transform 160ms ease, filter 160ms ease;
+      transform: translateZ(0);
+      -webkit-transform: translateZ(0);
+      will-change: transform, filter, opacity;
+    }
+
+    /* 드롭 페이드 인 */
+    .flipCard.spawn{
+      opacity: 0;
+      transform: translateY(-18px);
+    }
+    .flipCard.spawn.spawnIn{
+      opacity: 1;
+      transform: translateY(0px);
+      transition: opacity 220ms ease, transform 220ms ease;
+    }
+
+    .flipInner{
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      -webkit-transform-style: preserve-3d;
+      transition: transform 520ms cubic-bezier(.2,.8,.2,1);
+      will-change: transform;
+      transform: translateZ(0);
+    }
+
+    .flipCard.flipped .flipInner{
+      transform: translateZ(0) rotateY(180deg);
+    }
+
+    .face{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      backface-visibility:hidden;
+      -webkit-backface-visibility:hidden;
+      overflow:hidden;
+      transition: opacity 220ms ease;
+    }
+
+    .back{
+      opacity:1;
+      z-index:2;
+      transform: rotateY(0deg);
+    }
+
+    .front{
+      opacity:0;
+      z-index:1;
+      transform: rotateY(180deg);
+      position: relative;
+    }
+
+    .flipCard.flipped .back{ opacity:0; z-index:1; }
+    .flipCard.flipped .front{ opacity:1; z-index:2; }
+
+    .faceImg{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      object-fit: cover;
+      display:block;
+      pointer-events:none;
+      -webkit-user-drag:none;
+      user-select:none;
+      z-index:1;
+    }
+
+    .num{
+      position:absolute;
+      left:50%;
+      top:50%;
+      transform: translate(-50%, -50%);
+      font-weight: 1200;
+      font-size: 54px;
+      color: var(--gold);
+      text-shadow:
+        0 0 18px rgba(248,207,87,0.20),
+        0 2px 0 rgba(0,0,0,0.55);
+      font-variant-numeric: tabular-nums;
+      pointer-events:none;
+      z-index:2;
+    }
+
+    .flipCard.selectable{ cursor:pointer; }
+
+    .flipCard.selected{
+      transform: translateY(-8px) scale(1.06);
+      filter:
+        drop-shadow(0 16px 26px rgba(0,0,0,0.70))
+        drop-shadow(0 0 18px rgba(195,169,224,0.28));
+    }
+    .flipCard.selected::after{
+      content:"";
+      position:absolute;
+      inset:-6px;
+      border-radius: 12px;
+      border: 2px solid rgba(195,169,224,0.62);
+      box-shadow: 0 0 18px rgba(195,169,224,0.22);
+      pointer-events:none;
+    }
+
+    /* ===== 제출 시 “반짝 + 정답/오답 색상” 후 소거 ===== */
+    .flipCard.removing{
+      pointer-events:none;
+    }
+    .flipCard.removing.ok{
+      animation: cardRemoveOk 320ms ease forwards;
+    }
+    .flipCard.removing.bad{
+      animation: cardRemoveBad 320ms ease forwards;
+    }
+
+    /* ✅ 살짝 반짝 → 사라짐 */
+    @keyframes cardRemoveOk{
+      0%{
+        opacity:1;
+        transform: scale(1.02);
+        filter:
+          drop-shadow(0 18px 30px rgba(0,0,0,0.68))
+          drop-shadow(0 0 14px rgba(248,207,87,0.45));
+      }
+      35%{
+        opacity:1;
+        transform: scale(1.04);
+        filter:
+          drop-shadow(0 18px 30px rgba(0,0,0,0.68))
+          drop-shadow(0 0 26px rgba(248,207,87,0.85))
+          drop-shadow(0 0 46px rgba(248,207,87,0.28));
+      }
+      100%{
+        opacity:0;
+        transform: scale(0.92);
+        filter:
+          drop-shadow(0 0 0 rgba(0,0,0,0));
+      }
+    }
+
+    @keyframes cardRemoveBad{
+      0%{
+        opacity:1;
+        transform: scale(1.02);
+        filter:
+          drop-shadow(0 18px 30px rgba(0,0,0,0.68))
+          drop-shadow(0 0 14px rgba(255,120,120,0.40));
+      }
+      35%{
+        opacity:1;
+        transform: scale(1.04);
+        filter:
+          drop-shadow(0 18px 30px rgba(0,0,0,0.68))
+          drop-shadow(0 0 26px rgba(255,120,120,0.85))
+          drop-shadow(0 0 46px rgba(255,120,120,0.26));
+      }
+      100%{
+        opacity:0;
+        transform: scale(0.92);
+        filter:
+          drop-shadow(0 0 0 rgba(0,0,0,0));
+      }
+    }
+
+    /* 제거 시 테두리도 같이 반짝이게 */
+    .flipCard.removing.ok::after,
+    .flipCard.removing.bad::after{
+      content:"";
+      position:absolute;
+      inset:-7px;
+      border-radius: 14px;
+      pointer-events:none;
+      opacity:0;
+      animation: rimFlash 320ms ease forwards;
+    }
+    .flipCard.removing.ok::after{
+      border: 2px solid rgba(248,207,87,0.92);
+      box-shadow: 0 0 18px rgba(248,207,87,0.55), 0 0 44px rgba(248,207,87,0.22);
+    }
+    .flipCard.removing.bad::after{
+      border: 2px solid rgba(255,140,140,0.92);
+      box-shadow: 0 0 18px rgba(255,120,120,0.48), 0 0 44px rgba(255,120,120,0.18);
+    }
+    @keyframes rimFlash{
+      0%{ opacity:0; transform: scale(0.98); }
+      30%{ opacity:1; transform: scale(1.00); }
+      100%{ opacity:0; transform: scale(1.02); }
+    }
+
+    /* ===== ✅ DEBUG: 카드별 정답/오답 배지 ===== */
+    .judgeBadge{
+      position:absolute;
+      right: 10px;
+      top: 10px;
+      z-index: 4;
+      font-weight: 1200;
+      font-size: 20px;
+      line-height: 1;
+      padding: 6px 8px;
+      border-radius: 12px;
+      background: rgba(0,0,0,0.38);
+      border: 1px solid rgba(255,255,255,0.12);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+      text-shadow: 0 2px 0 rgba(0,0,0,0.55);
+      pointer-events:none;
+      opacity: 0.0;
+      transform: translateZ(0);
+    }
+    .judgeBadge.show{ opacity: 1.0; }
+    .judgeBadge.ok{
+      color: rgba(248,207,87,0.98);
+      box-shadow: 0 0 16px rgba(248,207,87,0.18);
+    }
+    .judgeBadge.bad{
+      color: rgba(255,160,160,0.95);
+      box-shadow: 0 0 16px rgba(255,120,120,0.14);
+    }
+
+    /* ===== Bottom ===== */
+    .bottomBar{
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 18px;
+      display:flex;
+      justify-content:center;
+      gap: 12px;
+      align-items:center;
+      user-select:none;
+      z-index: 50;
+      pointer-events:none;
+    }
+    .bottomBar > *{ pointer-events:auto; }
+
+    /* ===== Result Overlay ===== */
+    .overlay{
+      position: fixed;
+      inset: 0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index: 999;
+      padding: 18px;
+      background: rgba(0,0,0,0.62);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    .overlay.open{ display:flex; }
+
+    .resultPanel{
+      width: min(1100px, 94vw);
+      text-align:left;
+      padding: 18px 18px 18px;
+      border-radius: 22px;
+      background: rgba(26,19,34,0.86);
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: 0 18px 60px rgba(0,0,0,0.65);
+      position: relative;
+      overflow:hidden;
+    }
+
+    .resultTitle{
+      font-size: 62px;
+      font-weight: 1200;
+      margin: 6px 0 16px;
+      text-align:center;
+      color: rgba(239,161,77,0.95);
+      text-shadow: 0 0 18px rgba(239,161,77,0.22), 0 8px 18px rgba(0,0,0,0.55);
+    }
+
+    .resultBodyWrap{
+      width: 100%;
+      display:flex;
+      justify-content:center;
+    }
+
+    .resultBody{
+      display:grid;
+      grid-template-columns: 250px auto;
+      column-gap: 50px;
+      align-items:start;
+    }
+
+    .resultSide{
+      width: 280px;
+      justify-self: end;
+      text-align: right;
+    }
+
+    .resultSide .resultLabel:first-of-type{
+      margin-top: 0;
+    }
+
+    .resultErasure{
+      display:flex;
+      flex-direction:column;
+      align-items:flex-start;
+    }
+
+    .erasureTitle{
+      font-size: 26px;
+      line-height: 30px;
+      margin: 0 0 12px;
+      color: rgba(239,161,77,0.85);
+      font-weight: 1100;
+    }
+
+    .resultGrid{
+      display:grid;
+      grid-template-columns: repeat(9, var(--dotR));
+      grid-auto-rows: var(--dotR);
+      gap: var(--dotR-gap);
+      align-content:start;
+      padding: 10px 10px 12px;
+      border-radius: 16px;
+      background: rgba(0,0,0,0.12);
+      border: 1px solid rgba(255,255,255,0.08);
+      width: fit-content;
+    }
+
+    .resultDot{
+      width: var(--dotR);
+      height: var(--dotR);
+      object-fit: contain;
+      filter: drop-shadow(0 0 8px rgba(248,207,87,0.18));
+    }
+    .resultDot.lit{
+      filter:
+        drop-shadow(0 0 10px rgba(248,207,87,0.55))
+        drop-shadow(0 0 18px rgba(248,207,87,0.22));
+    }
+
+    .resultLabel{
+      font-size: 26px;
+      font-weight: 1100;
+      margin: 14px 0 6px;
+      color: rgba(239,161,77,0.85);
+    }
+    .resultValue{
+      font-size: 42px;
+      font-weight: 1200;
+      margin: 0 0 8px;
+      color: rgba(255,255,255,0.92);
+      text-shadow: 0 0 14px rgba(0,0,0,0.60);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .scoreLabel{ margin-top: 18px; }
+
+    .resultBtns{
+      margin-top: 18px;
+      display:flex;
+      flex-direction:column;
+      gap: 14px;
+      align-items:center;
+    }
+    .resultBtns button{
+      width: min(320px, 90%);
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Start cover -->
+  <div class="startCover" id="startCover" aria-hidden="false">
+    <div class="startPanel">
+      <div class="startMsg">준비됐나요?!</div>
+      <button id="btnGameStart" disabled>리소스 로딩 (0%)</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <!-- HUD -->
+    <div class="hud">
+      <div class="hudInner">
+        <div class="hudBlock">
+          <div class="hudLabel">턴</div>
+          <div class="hudValue"><span id="turnNow">0</span> / <span id="turnMax">21</span></div>
+        </div>
+        <div class="hudBlock">
+          <div class="hudLabel">경과 시간</div>
+          <div class="hudValue"><span id="elapsedNow">-</span></div>
+        </div>
+        <div class="hudBlock">
+          <div class="hudLabel">점수</div>
+          <div class="hudValue"><span id="scoreNow">0</span>점</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Target + Erasure -->
+    <div class="targetArea">
+      <div class="dotPanel left" id="dotsLeft"></div>
+
+      <div class="targetStack">
+        <div class="targetLabel">타겟</div>
+        <div class="targetValue" id="targetNow">-</div>
+      </div>
+
+      <div class="dotPanel right" id="dotsRight"></div>
+    </div>
+
+    <!-- Cards -->
+    <div class="cardZone">
+      <div class="cardScroller" id="cardScroller">
+        <div class="cardsWrap" id="cardsWrap"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom -->
+  <div class="bottomBar">
+    <button id="btnSubmit" disabled>제출</button>
+    <button id="btnNextTurn">턴 넘기기</button>
+    <button id="btnRestart" class="ghost">재시작</button>
+    <button id="btnLobby" class="ghost">로비</button>
+  </div>
+
+  <!-- Result Overlay -->
+  <div class="overlay" id="resultOverlay" aria-hidden="true">
+    <div class="resultPanel" role="dialog" aria-modal="true">
+      <div class="resultTitle">수행 결과</div>
+
+      <div class="resultBodyWrap">
+        <div class="resultBody">
+          <div class="resultSide">
+            <div class="resultLabel">진행 시간</div>
+            <div class="resultValue" id="resultTime">-</div>
+
+            <div class="resultLabel scoreLabel">점수</div>
+            <div class="resultValue" id="finalScore">0</div>
+          </div>
+
+          <div class="resultErasure">
+            <div class="erasureTitle">소거 결과</div>
+            <div class="resultGrid" id="resultGrid"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="resultBtns">
+        <button id="btnAgain">재시작</button>
+        <button id="btnToLobby" class="ghost">로비</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ✅ TEST용: 카드별 정답/오답 표시
+  const DEBUG_SHOW_JUDGE = true; // 끄려면 false
+
+  // ===== 리소스 =====
+  const CARD_FRONT_URL = "https://raw.githubusercontent.com/Yuhisa-Kr/WebCardGame/main/Card_Front.png";
+  const CARD_BACK_URL  = "https://raw.githubusercontent.com/Yuhisa-Kr/WebCardGame/main/Card_Back.png";
+
+  const DOT_OFF_URL = "https://raw.githubusercontent.com/Yuhisa-Kr/WebCardGame/refs/heads/main/Card_ErasureState_Off.png";
+  const DOT_ON_URL  = "https://raw.githubusercontent.com/Yuhisa-Kr/WebCardGame/refs/heads/main/Card_ErasureState_On.png";
+  const DOT_BAD_URL = "https://raw.githubusercontent.com/Yuhisa-Kr/WebCardGame/refs/heads/main/Card_ErasureState_On_Incorrect.png";
+
+  // ===== 게임 파라미터 =====
+  const TOTAL_TURNS = 21;
+  const FIX_TURNS = 5;        // 남은 턴 5턴부터 약보정
+  const JACKPOT_P = 0.05;     // 마지막 턴 5% 확률로 타겟=1
+
+  const DRAW_COUNT = 4;
+  const DRAW_INTERVAL_MS = 100;
+  const REVEAL_DELAY_MS = 2000;
+  const FLIP_DURATION_MS = 520;
+
+  const BASE_SCORE = 100;
+  const BASE_TIME = 10.0;
+  const ELAPSED_TICK_MS = 100;
+
+  // 카드 소거 애니메이션 시간( CSS keyframes 320ms와 맞춤 )
+  const REMOVE_ANIM_MS = 320;
+
+  // ===== 상태 =====
+  let deck = [];        // { serial, value }
+  let hand = [];        // { id, serial, value, el, badgeEl }
+  let selectedIds = new Set();
+  let target = null;
+
+  let turn = 0;
+  let score = 0;
+  let phase = "idle";
+
+  let elapsed = 0.0;
+  let elapsedTimer = null;
+
+  let revealTimer = null;
+  let drawTimer = null;
+  let flipTimer = null;
+  let fadeTimer = null;
+
+  let newlyDrawnIds = [];
+  let runStartMs = null;
+  let runEndMs = null;
+
+  // 소거 상태 (serial 0~80) 0:off, 1:correct, 2:incorrect
+  const erasureState = new Array(81).fill(0);
+  const dotEls = new Array(81);
+  const resultDotEls = new Array(81);
+
+  // ===== DOM =====
+  const elTurnNow = document.getElementById("turnNow");
+  const elTurnMax = document.getElementById("turnMax");
+  const elElapsedNow = document.getElementById("elapsedNow");
+  const elScoreNow = document.getElementById("scoreNow");
+  const elTargetNow = document.getElementById("targetNow");
+
+  const elCardsWrap = document.getElementById("cardsWrap");
+  const cardScroller = document.getElementById("cardScroller");
+
+  const dotsLeft = document.getElementById("dotsLeft");
+  const dotsRight = document.getElementById("dotsRight");
+  const resultGrid = document.getElementById("resultGrid");
+
+  const btnSubmit = document.getElementById("btnSubmit");
+  const btnNextTurn = document.getElementById("btnNextTurn");
+  const btnRestart = document.getElementById("btnRestart");
+  const btnLobby = document.getElementById("btnLobby");
+
+  const startCover = document.getElementById("startCover");
+  const btnGameStart = document.getElementById("btnGameStart");
+
+  const overlay = document.getElementById("resultOverlay");
+  const elFinalScore = document.getElementById("finalScore");
+  const elResultTime = document.getElementById("resultTime");
+  const btnAgain = document.getElementById("btnAgain");
+  const btnToLobby = document.getElementById("btnToLobby");
+
+  // ===== 유틸 =====
+  const randInt = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
+
+  function shuffle(arr){
+    for (let i=arr.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i],arr[j]] = [arr[j],arr[i]];
+    }
+    return arr;
+  }
+
+  function buildDeck(){
+    const d = [];
+    let serial = 0;
+    for (let i=1;i<=9;i++){
+      for (let j=1;j<=9;j++){
+        d.push({ serial, value: i*j });
+        serial++;
+      }
+    }
+    return shuffle(d);
+  }
+
+  function pickTargetFromRemaining() {
+    const pool = [];
+    for (const c of hand) pool.push(c.value);
+    for (const c of deck) pool.push(c.value);
+    if (pool.length === 0) return randInt(1,9) * randInt(1,9);
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  // ✅ 같은 값 OR 배수 OR 약수
+  function isGoodCard(cardValue, t){
+    return (cardValue === t) || (cardValue % t === 0) || (t % cardValue === 0);
+  }
+
+  function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
+
+  function scoreForCorrect(elapsedSec){
+    const e = clamp(elapsedSec, 0.1, 9999);
+    const ratio = BASE_TIME / e;
+    const bonus = Math.floor(BASE_SCORE * (Math.log10(ratio)));
+    return BASE_SCORE + bonus;
+  }
+
+  function fmtRunTime(seconds){
+    const s = Math.floor(seconds);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const r = s % 60;
+    if (h >= 1) return `${h}시간 ${m}분 ${r}초`;
+    if (m >= 1) return `${m}분 ${r}초`;
+    return `${r}초`;
+  }
+
+  function clearTimers(){
+    if (revealTimer){ clearTimeout(revealTimer); revealTimer = null; }
+    if (drawTimer){ clearInterval(drawTimer); drawTimer = null; }
+    if (flipTimer){ clearTimeout(flipTimer); flipTimer = null; }
+    if (fadeTimer){ clearTimeout(fadeTimer); fadeTimer = null; }
+  }
+
+  function stopElapsedTimer(){
+    if (elapsedTimer){
+      clearInterval(elapsedTimer);
+      elapsedTimer = null;
+    }
+  }
+
+  function startElapsedTimer(){
+    stopElapsedTimer();
+    elapsed = 0.0;
+    renderHud();
+    elapsedTimer = setInterval(() => {
+      elapsed = +(elapsed + 0.1).toFixed(10);
+      renderHud();
+    }, ELAPSED_TICK_MS);
+  }
+
+  function scrollToBottom(){
+    cardScroller.scrollTop = cardScroller.scrollHeight;
+  }
+
+  function setOverlayOpen(open){
+    overlay.classList.toggle("open", open);
+    overlay.setAttribute("aria-hidden", open ? "false" : "true");
+  }
+
+  function renderHud(){
+    elTurnNow.textContent = String(turn);
+    elTurnMax.textContent = String(TOTAL_TURNS);
+    elScoreNow.textContent = String(score);
+    elElapsedNow.textContent = (phase === "play") ? `${Math.max(0, elapsed).toFixed(1)}초` : "-";
+  }
+
+  function updateSubmitEnabled(){
+    btnSubmit.disabled = !(phase === "play" && selectedIds.size > 0);
+  }
+
+  function showTargetValue(){ elTargetNow.classList.add("show"); }
+  function hideTargetValue(){ elTargetNow.classList.remove("show"); }
+
+  function clearSelection(){
+    selectedIds.clear();
+    for (const c of hand) c.el.classList.remove("selected");
+    updateSubmitEnabled();
+  }
+
+  // ===== ✅ DEBUG: 손패 카드별 정답/오답 배지 갱신 =====
+  function refreshJudgeBadges(){
+    if (!DEBUG_SHOW_JUDGE) return;
+    if (!target) return;
+
+    for (const c of hand){
+      if (!c.badgeEl) continue;
+      const ok = isGoodCard(c.value, target);
+      c.badgeEl.textContent = ok ? "✅" : "❌";
+      c.badgeEl.classList.toggle("ok", ok);
+      c.badgeEl.classList.toggle("bad", !ok);
+      c.badgeEl.classList.add("show");
+    }
+  }
+
+  // ===== 소거 점 UI =====
+  function makeImg(cls, src){
+    const img = document.createElement("img");
+    img.className = cls;
+    img.alt = "dot";
+    img.src = src;
+    return img;
+  }
+
+  function makeRow(isDouble){
+    const row = document.createElement("div");
+    row.className = "erRow";
+    if (isDouble){
+      const g1 = document.createElement("div");
+      g1.className = "dotGroup";
+      const g2 = document.createElement("div");
+      g2.className = "dotGroup";
+      row.appendChild(g1);
+      row.appendChild(g2);
+      row._g1 = g1;
+      row._g2 = g2;
+    } else {
+      const g = document.createElement("div");
+      g.className = "dotGroup";
+      row.appendChild(g);
+      row._g = g;
+    }
+    return row;
+  }
+
+  function initDots(){
+    dotsLeft.innerHTML = "";
+    dotsRight.innerHTML = "";
+    resultGrid.innerHTML = "";
+
+    // 좌측: 9+9 / 9 / 9+9
+    const L1 = makeRow(true);
+    const L2 = makeRow(false);
+    const L3 = makeRow(true);
+    dotsLeft.append(L1, L2, L3);
+
+    // 우측: 9 / 9+9 / 9
+    const R1 = makeRow(false);
+    const R2 = makeRow(true);
+    const R3 = makeRow(false);
+    dotsRight.append(R1, R2, R3);
+
+    for (let s=0; s<81; s++){
+      const d = makeImg("dot", DOT_OFF_URL);
+      dotEls[s] = d;
+
+      if (s < 45){
+        if (s < 18){
+          (s < 9 ? L1._g1 : L1._g2).appendChild(d);
+        } else if (s < 27){
+          L2._g.appendChild(d);
+        } else {
+          const k = s - 27;
+          (k < 9 ? L3._g1 : L3._g2).appendChild(d);
+        }
+      } else {
+        const r = s - 45;
+        if (r < 9){
+          R1._g.appendChild(d);
+        } else if (r < 27){
+          const k = r - 9;
+          (k < 9 ? R2._g1 : R2._g2).appendChild(d);
+        } else {
+          R3._g.appendChild(d);
+        }
+      }
+
+      // 결과 UI(9x9)
+      const rd = makeImg("resultDot", DOT_OFF_URL);
+      resultDotEls[s] = rd;
+      resultGrid.appendChild(rd);
+    }
+  }
+
+  function resetDots(){
+    for (let s=0; s<81; s++){
+      erasureState[s] = 0;
+      const d = dotEls[s];
+      const rd = resultDotEls[s];
+      if (d){
+        d.src = DOT_OFF_URL;
+        d.classList.remove("lit","pulse");
+      }
+      if (rd){
+        rd.src = DOT_OFF_URL;
+        rd.classList.remove("lit");
+      }
+    }
+  }
+
+  function setDotState(serial, isCorrect){
+    if (serial < 0 || serial >= 81) return;
+    if (erasureState[serial] !== 0) return;
+
+    erasureState[serial] = isCorrect ? 1 : 2;
+    const src = isCorrect ? DOT_ON_URL : DOT_BAD_URL;
+
+    const d = dotEls[serial];
+    if (d){
+      d.src = src;
+      d.classList.add("lit");
+      d.classList.remove("pulse");
+      void d.offsetWidth;
+      d.classList.add("pulse");
+    }
+
+    const rd = resultDotEls[serial];
+    if (rd){
+      rd.src = src;
+      rd.classList.add("lit");
+    }
+  }
+
+  // ===== 카드 생성 =====
+  let cardIdSeq = 1;
+
+  function createCardElement(cardId, value){
+    const card = document.createElement("div");
+    card.className = "flipCard spawn selectable";
+    card.dataset.id = String(cardId);
+
+    const inner = document.createElement("div");
+    inner.className = "flipInner";
+
+    const back = document.createElement("div");
+    back.className = "face back";
+    back.appendChild(makeImg("faceImg", CARD_BACK_URL));
+
+    const front = document.createElement("div");
+    front.className = "face front";
+    front.appendChild(makeImg("faceImg", CARD_FRONT_URL));
+
+    const num = document.createElement("div");
+    num.className = "num";
+    num.textContent = String(value);
+    front.appendChild(num);
+
+    const badge = document.createElement("div");
+    badge.className = "judgeBadge";
+    badge.textContent = "?";
+    front.appendChild(badge);
+
+    inner.appendChild(back);
+    inner.appendChild(front);
+    card.appendChild(inner);
+
+    card.addEventListener("click", () => {
+      if (phase !== "play") return;
+      if (card.classList.contains("removing")) return;
+
+      if (selectedIds.has(cardId)) selectedIds.delete(cardId);
+      else selectedIds.add(cardId);
+
+      card.classList.toggle("selected", selectedIds.has(cardId));
+      updateSubmitEnabled();
+    });
+
+    return { cardEl: card, badgeEl: badge };
+  }
+
+  function addCardToHand(cardObj){
+    const id = cardIdSeq++;
+    const { cardEl, badgeEl } = createCardElement(id, cardObj.value);
+
+    cardEl.classList.remove("flipped");
+    cardEl.classList.remove("selected");
+
+    elCardsWrap.appendChild(cardEl);
+    requestAnimationFrame(() => cardEl.classList.add("spawnIn"));
+
+    const entry = { id, serial: cardObj.serial, value: cardObj.value, el: cardEl, badgeEl };
+    hand.push(entry);
+    newlyDrawnIds.push(id);
+
+    requestAnimationFrame(scrollToBottom);
+    return id;
+  }
+
+  function clearAllCards(){
+    hand = [];
+    selectedIds.clear();
+    elCardsWrap.innerHTML = "";
+    updateSubmitEnabled();
+  }
+
+  // ===== 턴 진행 =====
+  function startGameSession(){
+    clearTimers();
+    stopElapsedTimer();
+    setOverlayOpen(false);
+
+    deck = buildDeck();
+    clearAllCards();
+    resetDots();
+
+    turn = 0;
+    score = 0;
+    target = null;
+    phase = "idle";
+
+    runStartMs = performance.now();
+    runEndMs = null;
+
+    hideTargetValue();
+    elTargetNow.textContent = "-";
+
+    renderHud();
+    updateSubmitEnabled();
+    nextTurn(false);
+  }
+
+  function nextTurn(withFade){
+    if (turn >= TOTAL_TURNS){
+      endGame();
+      return;
+    }
+
+    const start = () => {
+      turn += 1;
+
+      const isLastTurn = (turn === TOTAL_TURNS);
+      const isFixZone = (turn >= (TOTAL_TURNS - FIX_TURNS + 1));
+
+      if (isLastTurn && Math.random() < JACKPOT_P) {
+        target = 1;
+      } else if (isFixZone) {
+        target = pickTargetFromRemaining();
+      } else {
+        target = randInt(1,9) * randInt(1,9);
+      }
+
+      elTargetNow.textContent = String(target);
+
+      clearSelection();
+      newlyDrawnIds = [];
+      phase = "reveal";
+
+      renderHud();
+      updateSubmitEnabled();
+
+      showTargetValue();
+      refreshJudgeBadges();
+
+      revealTimer = setTimeout(() => beginDraw(), REVEAL_DELAY_MS);
+    };
+
+    stopElapsedTimer();
+    renderHud();
+
+    if (withFade){
+      hideTargetValue();
+      fadeTimer = setTimeout(start, 300);
+    } else {
+      start();
+    }
+  }
+
+  function beginDraw(){
+    if (phase !== "reveal") return;
+
+    phase = "drawing";
+    renderHud();
+    updateSubmitEnabled();
+
+    let drawn = 0;
+    drawTimer = setInterval(() => {
+      if (drawn >= DRAW_COUNT || deck.length <= 0){
+        clearInterval(drawTimer);
+        drawTimer = null;
+        beginFlipAllNew();
+        return;
+      }
+      addCardToHand(deck.pop());
+      drawn += 1;
+    }, DRAW_INTERVAL_MS);
+  }
+
+  function beginFlipAllNew(){
+    phase = "flipping";
+    renderHud();
+    updateSubmitEnabled();
+
+    for (const id of newlyDrawnIds){
+      const c = hand.find(x => x.id === id);
+      if (c) c.el.classList.add("flipped");
+    }
+
+    flipTimer = setTimeout(() => beginPlay(), FLIP_DURATION_MS + 40);
+  }
+
+  function beginPlay(){
+    phase = "play";
+    renderHud();
+    updateSubmitEnabled();
+    startElapsedTimer();
+    refreshJudgeBadges();
+  }
+
+  function submitTurn(){
+    if (phase !== "play") return;
+    if (selectedIds.size <= 0) return;
+
+    const elapsedAtSubmit = clamp(elapsed, 0.1, 9999);
+
+    const ids = Array.from(selectedIds);
+    let deltaTotal = 0;
+
+    for (const id of ids){
+      const c = hand.find(x => x.id === id);
+      if (!c) continue;
+
+      const ok = isGoodCard(c.value, target);
+      if (ok) deltaTotal += scoreForCorrect(elapsedAtSubmit);
+      else deltaTotal -= BASE_SCORE;
+
+      setDotState(c.serial, ok);
+
+      // ✅ 제출 시 반짝 + 정답/오답 컬러 후 제거
+      c.el.classList.remove("selected");
+      c.el.classList.add("removing", ok ? "ok" : "bad");
+    }
+
+    score += deltaTotal;
+
+    stopElapsedTimer();
+    clearTimers();
+    clearSelection();
+    phase = "idle";
+    renderHud();
+    updateSubmitEnabled();
+
+    setTimeout(() => {
+      const toRemove = new Set(ids);
+      hand = hand.filter(c => {
+        if (!toRemove.has(c.id)) return true;
+        c.el.remove();
+        return false;
+      });
+
+      requestAnimationFrame(scrollToBottom);
+      nextTurn(true);
+    }, REMOVE_ANIM_MS + 10);
+  }
+
+  function skipTurn(){
+    if (phase !== "play") return;
+
+    stopElapsedTimer();
+    clearTimers();
+    clearSelection();
+
+    phase = "idle";
+    renderHud();
+    updateSubmitEnabled();
+    nextTurn(true);
+  }
+
+  function endGame(){
+    clearTimers();
+    stopElapsedTimer();
+    clearSelection();
+
+    phase = "ended";
+    renderHud();
+    updateSubmitEnabled();
+
+    runEndMs = performance.now();
+    const elapsedSec = (runEndMs - runStartMs) / 1000;
+
+    elFinalScore.textContent = String(score);
+    elResultTime.textContent = fmtRunTime(elapsedSec);
+
+    setOverlayOpen(true);
+  }
+
+  // ===== 버튼 =====
+  btnSubmit.addEventListener("click", submitTurn);
+  btnNextTurn.addEventListener("click", skipTurn);
+
+  btnRestart.addEventListener("click", () => startGameSession());
+  btnLobby.addEventListener("click", () => window.location.href = "MR_Lobby.html");
+
+  btnAgain.addEventListener("click", () => {
+    setOverlayOpen(false);
+    startGameSession();
+  });
+  btnToLobby.addEventListener("click", () => window.location.href = "MR_Lobby.html");
+
+  btnGameStart.addEventListener("click", () => {
+    startCover.classList.add("hide");
+    startGameSession();
+  });
+
+  // ===== 로딩: 버튼 텍스트만 =====
+  function preloadOne(url){
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(true);
+      img.onerror = () => resolve(false);
+      img.src = url;
+    });
+  }
+
+  async function preloadWithProgress(urls, onProgress){
+    let done = 0;
+    const total = urls.length;
+    for (const url of urls){
+      const ok = await preloadOne(url);
+      done++;
+      const pct = Math.round((done / total) * 100);
+      onProgress(pct, ok);
+    }
+  }
+
+  (async () => {
+    initDots();
+    elTurnMax.textContent = String(TOTAL_TURNS);
+
+    btnGameStart.disabled = true;
+    btnGameStart.textContent = "리소스 로딩 (0%)";
+
+    let allOk = true;
+    const urls = [CARD_FRONT_URL, CARD_BACK_URL, DOT_OFF_URL, DOT_ON_URL, DOT_BAD_URL];
+
+    await preloadWithProgress(urls, (pct, ok) => {
+      if (!ok) allOk = false;
+
+      if (pct >= 100){
+        if (allOk){
+          btnGameStart.textContent = "준비 완료";
+          btnGameStart.disabled = false;
+        } else {
+          btnGameStart.textContent = "리소스 로딩 (100%)";
+          btnGameStart.disabled = true;
+        }
+      } else {
+        btnGameStart.textContent = `리소스 로딩 (${pct}%)`;
+      }
+    });
+  })();
+
+  // 제출 버튼 상태 안전 갱신
+  setInterval(() => updateSubmitEnabled(), 120);
+})();
+</script>
+</body>
+</html>

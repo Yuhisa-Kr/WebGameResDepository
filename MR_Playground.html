@@ -185,7 +185,7 @@
     .dotPanel{
       display:flex;
       flex-direction:column;
-      gap: var(--dotCenterY);      /* ✅ 세로 중앙 간격 */
+      gap: 0;      /* ✅ 세로 중앙 간격 */
       align-items:center;
       justify-content:flex-start;
       width: fit-content;
@@ -194,24 +194,37 @@
       display:flex;
       align-items:center;
       justify-content:center;
-      gap: var(--dotDoubleGap);    /* ✅ 9 + 9 간격 */
+      gap: var(--dotDoubleGap);     /* 9 + 9 사이 간격(45px)은 그대로 */
+      height: var(--dotCenterY);    /* ✅ 이 줄의 중앙 높이 기준 */
     }
     .dotGroup{
       display:flex;
       align-items:center;
-      gap: var(--dotCenterX);      /* ✅ 가로 중앙 간격 */
+      gap: 0;                        /* ✅ 중앙 간격은 slot 폭으로 해결 */
     }
 
+    /* ✅ 중앙-중앙 간격용 "칸"(slot) */
+    .dotSlot{
+      width: var(--dotCenterX);   /* 중앙-중앙 가로 간격(30px) */
+      height: var(--dotCenterY);  /* 중앙-중앙 세로 간격(50px) */
+      position: relative;         /* ✅ 이게 없어서 전부 가운데로 모였던 거 */
+      flex: 0 0 auto;
+    }
+
+    /* ✅ 실제 이미지(50x50)는 칸 중앙에 겹쳐서 배치 */
     .dot{
       width: var(--dotW);
       height: var(--dotH);
       object-fit: contain;
+      position:absolute;
+      left:50%;
+      top:50%;
+      transform: translate(-50%, -50%);
       display:block;
       margin:0;
       padding:0;
       line-height:0;
-      flex: 0 0 auto;
-      transform: translateZ(0);
+      transform-origin: center;
     }
     .dot.lit{
       filter:
@@ -220,9 +233,9 @@
     }
     .dot.pulse{ animation: dotPulse 320ms ease-out; }
     @keyframes dotPulse{
-      0%   { transform: scale(0.92); opacity: 0.85; }
-      45%  { transform: scale(1.14); opacity: 1; }
-      100% { transform: scale(1.00); }
+      0%   { transform: translate(-50%, -50%) scale(0.92); opacity: 0.85; }
+      45%  { transform: translate(-50%, -50%) scale(1.14); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(1.00); }
     }
 
     .targetStack{
@@ -984,6 +997,13 @@
     return row;
   }
 
+  function makeSlotWithDot(imgEl){
+    const slot = document.createElement("div");
+    slot.className = "dotSlot";
+    slot.appendChild(imgEl);
+    return slot;
+  }
+
   function initDots(){
     dotsLeft.innerHTML = "";
     dotsRight.innerHTML = "";
@@ -1005,24 +1025,26 @@
       const d = makeImg("dot", DOT_OFF_URL);
       dotEls[s] = d;
 
+      const slot = makeSlotWithDot(d);
+
       if (s < 45){
         if (s < 18){
-          (s < 9 ? L1._g1 : L1._g2).appendChild(d);
+          (s < 9 ? L1._g1 : L1._g2).appendChild(slot);
         } else if (s < 27){
-          L2._g.appendChild(d);
+          L2._g.appendChild(slot);
         } else {
-          const k = s - 27;
-          (k < 9 ? L3._g1 : L3._g2).appendChild(d);
+          const k = s - 27; // 0~17
+          (k < 9 ? L3._g1 : L3._g2).appendChild(slot);
         }
       } else {
-        const r = s - 45;
+        const r = s - 45; // 0~35
         if (r < 9){
-          R1._g.appendChild(d);
+          R1._g.appendChild(slot);
         } else if (r < 27){
-          const k = r - 9;
-          (k < 9 ? R2._g1 : R2._g2).appendChild(d);
+          const k = r - 9; // 0~17
+          (k < 9 ? R2._g1 : R2._g2).appendChild(slot);
         } else {
-          R3._g.appendChild(d);
+          R3._g.appendChild(slot);
         }
       }
 

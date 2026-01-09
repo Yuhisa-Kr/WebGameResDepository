@@ -19,7 +19,7 @@
       --bg:#1a1322;
       --accent:#c3a9e0;
       --gold:#f8cf57;
-      --glow: rgba(239,161,77,0.70); /* #efa14d @ 70% */
+      --glow: rgba(239,161,77,0.70);
 
       --card-w:141px;
       --card-h:250px;
@@ -30,12 +30,17 @@
       --dotR: 20px;
       --dotR-gap: 7px;
 
-      /* ✅ dot “중앙 기준” 간격 */
-      --dotW: 50px;  /* 리소스 실제 크기 */
+      /* dot “중앙 기준” 간격 */
+      --dotW: 50px;
       --dotH: 50px;
       --dotCenterX: 30px; /* 중앙-중앙 가로 간격 */
       --dotCenterY: 50px; /* 중앙-중앙 세로 간격 */
       --dotDoubleGap: 45px; /* 9 + 9 사이 간격 */
+
+      /* ✅ Background */
+      --bgTop:#1a1322;
+      --bgBot:#2b0654;
+      --bgImg:url("https://raw.githubusercontent.com/Yuhisa-Kr/WebCardGame/refs/heads/main/MR_Background.png");
     }
 
     *{ box-sizing:border-box; }
@@ -43,15 +48,54 @@
     body{
       margin:0;
       height:100vh;
-      background:
-        radial-gradient(1100px 700px at 50% 0%, rgba(195,169,224,0.12), transparent 55%),
-        radial-gradient(1200px 700px at 50% 100%, rgba(195,169,224,0.08), transparent 60%),
-        var(--bg);
-      color: rgba(255,255,255,0.92);
       overflow:hidden;
+      color: rgba(255,255,255,0.92);
 
-      /* ✅ 전 텍스트 폰트 */
       font-family: "NanumHumanHeavy", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+
+      /* ✅ 1) 전체 화면 그라데이션 바탕 */
+      background: linear-gradient(180deg, var(--bgTop) 0%, var(--bgBot) 100%);
+      position: relative;
+    }
+
+    /* ✅ 2) 빈 공간 채우는 “블러 커버” */
+    body::before{
+      content:"";
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      background-image: var(--bgImg);
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+
+      filter: blur(22px) brightness(0.82) saturate(1.05);
+      transform: scale(1.08);
+    }
+
+    /* ✅ 3) 원본 비율 그대로(안 잘림) */
+    body::after{
+      content:"";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background-image: var(--bgImg);
+      background-size: contain;
+      background-position: center;
+      background-repeat: no-repeat;
+      opacity: 1;
+    }
+
+    .wrap::before {
+      content:"";
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      background: radial-gradient(
+        60% 40% at 50% 35%,
+        rgba(0,0,0,0),
+        rgba(0,0,0,0.35)
+      );
     }
 
     .wrap{
@@ -181,11 +225,10 @@
       min-height: 190px;
     }
 
-    /* ✅ dot 패널: “중앙 기준 간격” 적용 */
     .dotPanel{
       display:flex;
       flex-direction:column;
-      gap: 0;      /* ✅ 세로 중앙 간격 */
+      gap: 0;
       align-items:center;
       justify-content:flex-start;
       width: fit-content;
@@ -194,24 +237,23 @@
       display:flex;
       align-items:center;
       justify-content:center;
-      gap: var(--dotDoubleGap);     /* 9 + 9 사이 간격(45px)은 그대로 */
-      height: var(--dotCenterY);    /* ✅ 이 줄의 중앙 높이 기준 */
+      gap: var(--dotDoubleGap);
+      height: var(--dotCenterY);
     }
     .dotGroup{
       display:flex;
       align-items:center;
-      gap: 0;                        /* ✅ 중앙 간격은 slot 폭으로 해결 */
+      gap: 0;
     }
 
-    /* ✅ 중앙-중앙 간격용 "칸"(slot) */
+    /* 중앙-중앙 간격용 슬롯 */
     .dotSlot{
-      width: var(--dotCenterX);   /* 중앙-중앙 가로 간격(30px) */
-      height: var(--dotCenterY);  /* 중앙-중앙 세로 간격(50px) */
-      position: relative;         /* ✅ 이게 없어서 전부 가운데로 모였던 거 */
+      width: var(--dotCenterX);
+      height: var(--dotCenterY);
+      position: relative;
       flex: 0 0 auto;
     }
 
-    /* ✅ 실제 이미지(50x50)는 칸 중앙에 겹쳐서 배치 */
     .dot{
       width: var(--dotW);
       height: var(--dotH);
@@ -315,7 +357,6 @@
       will-change: transform, filter, opacity;
     }
 
-    /* 드롭 페이드 인 */
     .flipCard.spawn{
       opacity: 0;
       transform: translateY(-18px);
@@ -352,18 +393,8 @@
       transition: opacity 220ms ease;
     }
 
-    .back{
-      opacity:1;
-      z-index:2;
-      transform: rotateY(0deg);
-    }
-
-    .front{
-      opacity:0;
-      z-index:1;
-      transform: rotateY(180deg);
-      position: relative;
-    }
+    .back{ opacity:1; z-index:2; transform: rotateY(0deg); }
+    .front{ opacity:0; z-index:1; transform: rotateY(180deg); position: relative; }
 
     .flipCard.flipped .back{ opacity:0; z-index:1; }
     .flipCard.flipped .front{ opacity:1; z-index:2; }
@@ -416,66 +447,25 @@
     }
 
     /* ===== 제출 시 “반짝 + 정답/오답 색상” 후 소거 ===== */
-    .flipCard.removing{
-      pointer-events:none;
-    }
-    .flipCard.removing.ok{
-      animation: cardRemoveOk 320ms ease forwards;
-    }
-    .flipCard.removing.bad{
-      animation: cardRemoveBad 320ms ease forwards;
-    }
+    .flipCard.removing{ pointer-events:none; }
+    .flipCard.removing.ok{ animation: cardRemoveOk 320ms ease forwards; }
+    .flipCard.removing.bad{ animation: cardRemoveBad 320ms ease forwards; }
 
-    /* ✅ 살짝 반짝 → 사라짐 */
     @keyframes cardRemoveOk{
-      0%{
-        opacity:1;
-        transform: scale(1.02);
-        filter:
-          drop-shadow(0 18px 30px rgba(0,0,0,0.68))
-          drop-shadow(0 0 14px rgba(248,207,87,0.45));
-      }
-      35%{
-        opacity:1;
-        transform: scale(1.04);
-        filter:
-          drop-shadow(0 18px 30px rgba(0,0,0,0.68))
-          drop-shadow(0 0 26px rgba(248,207,87,0.85))
-          drop-shadow(0 0 46px rgba(248,207,87,0.28));
-      }
-      100%{
-        opacity:0;
-        transform: scale(0.92);
-        filter:
-          drop-shadow(0 0 0 rgba(0,0,0,0));
-      }
+      0%{ opacity:1; transform: scale(1.02);
+        filter: drop-shadow(0 18px 30px rgba(0,0,0,0.68)) drop-shadow(0 0 14px rgba(248,207,87,0.45));}
+      35%{ opacity:1; transform: scale(1.04);
+        filter: drop-shadow(0 18px 30px rgba(0,0,0,0.68)) drop-shadow(0 0 26px rgba(248,207,87,0.85)) drop-shadow(0 0 46px rgba(248,207,87,0.28));}
+      100%{ opacity:0; transform: scale(0.92); filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
     }
-
     @keyframes cardRemoveBad{
-      0%{
-        opacity:1;
-        transform: scale(1.02);
-        filter:
-          drop-shadow(0 18px 30px rgba(0,0,0,0.68))
-          drop-shadow(0 0 14px rgba(255,120,120,0.40));
-      }
-      35%{
-        opacity:1;
-        transform: scale(1.04);
-        filter:
-          drop-shadow(0 18px 30px rgba(0,0,0,0.68))
-          drop-shadow(0 0 26px rgba(255,120,120,0.85))
-          drop-shadow(0 0 46px rgba(255,120,120,0.26));
-      }
-      100%{
-        opacity:0;
-        transform: scale(0.92);
-        filter:
-          drop-shadow(0 0 0 rgba(0,0,0,0));
-      }
+      0%{ opacity:1; transform: scale(1.02);
+        filter: drop-shadow(0 18px 30px rgba(0,0,0,0.68)) drop-shadow(0 0 14px rgba(255,120,120,0.40));}
+      35%{ opacity:1; transform: scale(1.04);
+        filter: drop-shadow(0 18px 30px rgba(0,0,0,0.68)) drop-shadow(0 0 26px rgba(255,120,120,0.85)) drop-shadow(0 0 46px rgba(255,120,120,0.26));}
+      100%{ opacity:0; transform: scale(0.92); filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
     }
 
-    /* 제거 시 테두리도 같이 반짝이게 */
     .flipCard.removing.ok::after,
     .flipCard.removing.bad::after{
       content:"";
@@ -500,7 +490,7 @@
       100%{ opacity:0; transform: scale(1.02); }
     }
 
-    /* ===== ✅ DEBUG: 카드별 정답/오답 배지 ===== */
+    /* ===== DEBUG 배지 ===== */
     .judgeBadge{
       position:absolute;
       right: 10px;
@@ -761,8 +751,8 @@
 
 <script>
 (() => {
-  // ✅ TEST용: 카드별 정답/오답 표시
-  const DEBUG_SHOW_JUDGE = true; // 끄려면 false
+  // ===== Debug =====
+  const DEBUG_SHOW_JUDGE = false;
 
   // ===== 리소스 =====
   const CARD_FRONT_URL = "https://raw.githubusercontent.com/Yuhisa-Kr/WebCardGame/main/Card_Front.png";
@@ -774,19 +764,43 @@
 
   // ===== 게임 파라미터 =====
   const TOTAL_TURNS = 21;
-  const FIX_TURNS = 5;        // 남은 턴 5턴부터 약보정
-  const JACKPOT_P = 0.05;     // 마지막 턴 5% 확률로 타겟=1
+  const FIX_TURNS = 5;
+  const JACKPOT_P = 0.05;
 
   const DRAW_COUNT = 4;
   const DRAW_INTERVAL_MS = 100;
   const REVEAL_DELAY_MS = 2000;
   const FLIP_DURATION_MS = 520;
 
-  const BASE_SCORE = 100;
-  const BASE_TIME = 10.0;
+  // ===== ✅ 점수 규칙 (통짜 적용) =====
+  const BASE_SCORE = 100;          // 기본 정답 점수(카드 1장)
+  const WRONG_PENALTY = 100;       // 오답 감점(카드 1장)
+  const BASE_TIME = 20.0;          // ✅ 기준 시간(초) - 20초로 확정
   const ELAPSED_TICK_MS = 100;
 
-  // 카드 소거 애니메이션 시간( CSS keyframes 320ms와 맞춤 )
+  // ✅ 시간 가중치 강화(가장 높은 기준): log10 * TIME_MULT
+  const TIME_MULT = 5.0;           // 높일수록 빠른 유저가 더 이득 / 느리면 감점도 커짐
+
+  // ✅ 연속 정답 보너스(가장 높은 기준): 카드 장 단위로 누적
+  // - 각 정답 카드에 대해 "다음 streak"을 기준으로 보너스 산정
+  // - streak은 "제출에 오답이 섞이면" 즉시 0으로 초기화
+  // - 턴 넘어가도 유지
+  const STREAK_STEP = 12;          // streak 1 증가당 보너스 증가량(선형)
+  const STREAK_SOFT = 6;           // 완만화(너무 급격한 폭발 방지). 낮을수록 더 세짐.
+  // 보너스 = STREAK_STEP * floor((streak-1) / STREAK_SOFT + 1) * (streak-1)
+  // -> streak이 커질수록 점진적으로 올라가되, 너무 급폭발은 덜하게.
+
+  // ✅ 라인 보너스(혼합형, "높은 점수가 나올 수 있는 기준")
+  const LINE_CONST = 180;          // 라인 1개 완성 시 상수 보너스
+  const LINE_RATE  = 0.06;         // 라인 1개 완성 시 (현재점수 * 비율) 보너스
+
+  // ✅ 라인 구간 보너스(상수)
+  const TIER_2_LINES = 450;        // 누적 완성 라인 2개 달성
+  const TIER_4_LINES = 900;        // 누적 완성 라인 4개 달성
+  const TIER_7_LINES = 1800;       // 누적 완성 라인 7개 달성
+  const BONUS_FULL_CLEAR = 4000;   // 81칸 전체 점등 시
+
+  // 카드 소거 애니메이션 시간
   const REMOVE_ANIM_MS = 320;
 
   // ===== 상태 =====
@@ -798,6 +812,9 @@
   let turn = 0;
   let score = 0;
   let phase = "idle";
+
+  // ✅ 연속 정답 streak(카드 장 단위)
+  let streak = 0;
 
   let elapsed = 0.0;
   let elapsedTimer = null;
@@ -815,6 +832,15 @@
   const erasureState = new Array(81).fill(0);
   const dotEls = new Array(81);
   const resultDotEls = new Array(81);
+
+  // ✅ 라인 완성/보너스 상태
+  // 라인 정의: 가로 9 + 세로 9 = 총 18라인
+  const awardedLines = new Set(); // "R0".."R8","C0".."C8"
+  let totalCompletedLines = 0;
+  let tier2Done = false;
+  let tier4Done = false;
+  let tier7Done = false;
+  let fullDone  = false;
 
   // ===== DOM =====
   const elTurnNow = document.getElementById("turnNow");
@@ -875,18 +901,38 @@
     return pool[Math.floor(Math.random() * pool.length)];
   }
 
-  // ✅ 같은 값 OR 배수 OR 약수
+  // 같은 값 OR 배수 OR 약수
   function isGoodCard(cardValue, t){
     return (cardValue === t) || (cardValue % t === 0) || (t % cardValue === 0);
   }
 
   function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
 
-  function scoreForCorrect(elapsedSec){
+  // ===== ✅ 점수: 시간 가중치(강화) + 연속 정답 보너스 =====
+  function timeBonus(elapsedSec){
     const e = clamp(elapsedSec, 0.1, 9999);
+    // ratio > 1 이면 빠른 플레이, < 1 이면 느림
     const ratio = BASE_TIME / e;
-    const bonus = Math.floor(BASE_SCORE * (Math.log10(ratio)));
-    return BASE_SCORE + bonus;
+    // log10(ratio) : 빠르면 +, 느리면 -
+    return Math.floor(BASE_SCORE * TIME_MULT * Math.log10(ratio));
+  }
+
+  function streakBonus(nextStreak){
+    // nextStreak: 이번 카드까지 반영된 streak (1,2,3,...)
+    const s = Math.max(0, nextStreak - 1);
+    if (s <= 0) return 0;
+
+    // 완만화 계단: s가 커질수록 조금씩 더 커지되 폭발은 덜하게
+    const stepBucket = Math.floor(s / STREAK_SOFT) + 1; // 1,2,3...
+    return STREAK_STEP * stepBucket * s;
+  }
+
+  function pointsForCorrect(elapsedSec, nextStreak){
+    // 기본 + 시간 보너스 + 연속 보너스
+    const p = BASE_SCORE + timeBonus(elapsedSec) + streakBonus(nextStreak);
+
+    // ✅ 예외 처리: 정답인데 0 이하이면 무조건 1점
+    return (p <= 0) ? 1 : p;
   }
 
   function fmtRunTime(seconds){
@@ -952,7 +998,7 @@
     updateSubmitEnabled();
   }
 
-  // ===== ✅ DEBUG: 손패 카드별 정답/오답 배지 갱신 =====
+  // ===== DEBUG 배지 =====
   function refreshJudgeBadges(){
     if (!DEBUG_SHOW_JUDGE) return;
     if (!target) return;
@@ -1033,15 +1079,15 @@
         } else if (s < 27){
           L2._g.appendChild(slot);
         } else {
-          const k = s - 27; // 0~17
+          const k = s - 27;
           (k < 9 ? L3._g1 : L3._g2).appendChild(slot);
         }
       } else {
-        const r = s - 45; // 0~35
+        const r = s - 45;
         if (r < 9){
           R1._g.appendChild(slot);
         } else if (r < 27){
-          const k = r - 9; // 0~17
+          const k = r - 9;
           (k < 9 ? R2._g1 : R2._g2).appendChild(slot);
         } else {
           R3._g.appendChild(slot);
@@ -1069,6 +1115,14 @@
         rd.classList.remove("lit");
       }
     }
+
+    // ✅ 라인/티어 초기화
+    awardedLines.clear();
+    totalCompletedLines = 0;
+    tier2Done = false;
+    tier4Done = false;
+    tier7Done = false;
+    fullDone  = false;
   }
 
   function setDotState(serial, isCorrect){
@@ -1091,6 +1145,79 @@
     if (rd){
       rd.src = src;
       rd.classList.add("lit");
+    }
+  }
+
+  // ===== ✅ 라인 체크/보너스 =====
+  function isFilled(idx){ return erasureState[idx] !== 0; }
+
+  function countFilled(){
+    let c = 0;
+    for (let i=0;i<81;i++) if (isFilled(i)) c++;
+    return c;
+  }
+
+  function checkLineRow(r){
+    for (let c=0;c<9;c++){
+      const idx = r*9 + c;
+      if (!isFilled(idx)) return false;
+    }
+    return true;
+  }
+
+  function checkLineCol(c){
+    for (let r=0;r<9;r++){
+      const idx = r*9 + c;
+      if (!isFilled(idx)) return false;
+    }
+    return true;
+  }
+
+  function applyLineBonuses(){
+    // 새로 완성된 라인 찾아서 보너스 지급
+    let newLines = 0;
+
+    for (let r=0;r<9;r++){
+      const key = `R${r}`;
+      if (!awardedLines.has(key) && checkLineRow(r)){
+        awardedLines.add(key);
+        newLines++;
+      }
+    }
+    for (let c=0;c<9;c++){
+      const key = `C${c}`;
+      if (!awardedLines.has(key) && checkLineCol(c)){
+        awardedLines.add(key);
+        newLines++;
+      }
+    }
+
+    if (newLines > 0){
+      // 혼합형: (상수 + 현재점수 비율) * 라인 수
+      const perLine = LINE_CONST + Math.floor(score * LINE_RATE);
+      score += perLine * newLines;
+
+      totalCompletedLines += newLines;
+
+      // 구간 보너스(상수)
+      if (!tier2Done && totalCompletedLines >= 2){
+        tier2Done = true;
+        score += TIER_2_LINES;
+      }
+      if (!tier4Done && totalCompletedLines >= 4){
+        tier4Done = true;
+        score += TIER_4_LINES;
+      }
+      if (!tier7Done && totalCompletedLines >= 7){
+        tier7Done = true;
+        score += TIER_7_LINES;
+      }
+    }
+
+    // 전체 완성(81점등)
+    if (!fullDone && countFilled() >= 81){
+      fullDone = true;
+      score += BONUS_FULL_CLEAR;
     }
   }
 
@@ -1180,6 +1307,9 @@
     score = 0;
     target = null;
     phase = "idle";
+
+    // ✅ streak 초기화
+    streak = 0;
 
     runStartMs = performance.now();
     runEndMs = null;
@@ -1284,26 +1414,57 @@
     if (selectedIds.size <= 0) return;
 
     const elapsedAtSubmit = clamp(elapsed, 0.1, 9999);
-
     const ids = Array.from(selectedIds);
-    let deltaTotal = 0;
 
+    // 이번 제출에 오답이 섞였는지 먼저 판정
+    let hasWrong = false;
+    let selectedCards = [];
     for (const id of ids){
       const c = hand.find(x => x.id === id);
       if (!c) continue;
-
       const ok = isGoodCard(c.value, target);
-      if (ok) deltaTotal += scoreForCorrect(elapsedAtSubmit);
-      else deltaTotal -= BASE_SCORE;
+      if (!ok) hasWrong = true;
+      selectedCards.push({ c, ok });
+    }
+
+    let deltaTotal = 0;
+
+    // ✅ streak 규칙:
+    // - 오답 섞이면 "이번 제출 후" streak=0
+    // - 전부 정답이면 카드 장수만큼 streak 증가
+    // - 점수는 "각 카드 처리 시점의 nextStreak" 기준으로 지급
+    let localStreak = hasWrong ? 0 : streak;
+
+    let correctCount = 0;
+    for (const { c, ok } of selectedCards){
+      if (ok){
+        const nextStreak = localStreak + 1;
+        const p = pointsForCorrect(elapsedAtSubmit, nextStreak); // ✅ 정답 0 이하 -> 1점 처리 포함
+        deltaTotal += p;
+
+        localStreak = nextStreak;
+        correctCount++;
+
+      } else {
+        deltaTotal -= WRONG_PENALTY;
+      }
 
       setDotState(c.serial, ok);
 
-      // ✅ 제출 시 반짝 + 정답/오답 컬러 후 제거
+      // UI: 반짝 + 제거
       c.el.classList.remove("selected");
       c.el.classList.add("removing", ok ? "ok" : "bad");
     }
 
+    // 점수 반영
     score += deltaTotal;
+
+    // ✅ 라인/티어/풀클리어 보너스 적용
+    applyLineBonuses();
+
+    // ✅ streak 최종 반영
+    if (hasWrong) streak = 0;
+    else streak = streak + correctCount;
 
     stopElapsedTimer();
     clearTimers();
@@ -1332,6 +1493,7 @@
     clearTimers();
     clearSelection();
 
+    // ✅ 턴 넘기기는 streak 유지 (요구사항)
     phase = "idle";
     renderHud();
     updateSubmitEnabled();
